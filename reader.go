@@ -254,7 +254,8 @@ func (cr *CsvReader) openFile(thread int, errsChan chan<- error) *os.File {
 	errsChan <- err
 	cr.Logger.Error(
 		"msg", "could not open file", "err", err,
-		"file", cr.fileBaseName, "thread", thread)
+		"file", cr.fileBaseName, "thread", thread,
+	)
 
 	return nil
 }
