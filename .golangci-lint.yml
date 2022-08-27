@@ -1,0 +1,24 @@
+run:
+  deadline: 5m
+  tests: true
+
+linters:
+  disable-all: true
+  enable:
+    - gofmt
+    - govet
+    - staticcheck
+    - revive
+    - gosimple
+    - ineffassign
+    - unused
+    - goconst
+    - gocritic
+    - godot
+    - misspell
+    - nlreturn
+    - noctx
+    - whitespace
+
+issues:
+  exclude-use-default: false
