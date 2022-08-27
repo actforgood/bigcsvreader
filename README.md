@@ -1,19 +1,15 @@
 # BigCsvReader
 
-[![Build Status](https://github.com/actforgood/bigcscvreader/actions/workflows/build.yml/badge.svg)](https://github.com/actforgood/bigcscvreader/actions/workflows/build.yml)
-[![License](https://img.shields.io/badge/license-MIT-blue)](https://raw.githubusercontent.com/actforgood/bigcscvreader/main/LICENSE)
-[![Coverage Status](https://coveralls.io/repos/github/actforgood/bigcscvreader/badge.svg?branch=main)](https://coveralls.io/github/actforgood/bigcscvreader?branch=main)
-[![Go Reference](https://pkg.go.dev/badge/github.com/actforgood/bigcscvreader.svg)](https://pkg.go.dev/github.com/actforgood/bigcscvreader)  
+[![Build Status](https://github.com/actforgood/bigcsvreader/actions/workflows/build.yml/badge.svg)](https://github.com/actforgood/bigcsvreader/actions/workflows/build.yml)
+[![License](https://img.shields.io/badge/license-MIT-blue)](https://raw.githubusercontent.com/actforgood/bigcsvreader/main/LICENSE)
+[![Coverage Status](https://coveralls.io/repos/github/actforgood/bigcsvreader/badge.svg?branch=main)](https://coveralls.io/github/actforgood/bigcsvreader?branch=main)
+[![Go Reference](https://pkg.go.dev/badge/github.com/actforgood/bigcsvreader.svg)](https://pkg.go.dev/github.com/actforgood/bigcsvreader)  
 
 ---  
 
 Package `bigcscvreader` offers a multi-threaded approach for reading a large CSV file in order to improve the time of reading and processing it.  
 It spawns multiple goroutines, each reading a piece of the file.  
 Read rows are put into channels equal in number to the spawned goroutines, in this way also the processing of those rows can be parallelized.  
-
-// TODO: delete following
-go test -cpuprofile cpu_readall.prof -memprofile mem_readall.prof -bench=withGoCsvReaderReadAll
-go tool pprof -http=:8080 mem_readall.prof
 
 
 ### Benchmarks
