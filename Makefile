@@ -25,7 +25,7 @@ setup: ## Download dependencies.
 
 .PHONY: test
 test: ## Run tests (with race condition detection).
-	go test -race -timeout=3m $(go list ./... | grep -v /cmd/)
+	go test -race -timeout=5m $(go list ./... | grep -v /cmd/)
 
 .PHONY: bench
 bench: ## Run benchmarks.
@@ -33,7 +33,7 @@ bench: ## Run benchmarks.
 
 .PHONY: cover
 cover: ## Run tests with coverage. Generates "cover.out" profile and its html representation.
-	go test -race -timeout=3m -coverprofile=cover.out -coverpkg=./... $(go list ./... | grep -v /cmd/)
+	go test -race -timeout=5m -coverprofile=cover.out -coverpkg=./... $(go list ./... | grep -v /cmd/)
 	go tool cover -html=cover.out -o cover.html
 
 .PHONY: tidy
