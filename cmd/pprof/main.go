@@ -79,7 +79,7 @@ func main() {
 
 // setUpTmpCsvFile creates a CSV file in the OS's temp directory, like `/tmp/bigcsvreder_<noOfRows>-<randString>.csv` .
 // The file will have the provided number of rows.
-// Rows looks like:
+// Rows look like:
 //
 //	1,Product_1,"Lorem ipsum...",150.99,35\n
 //	2,Product_2,"Lorem ipsum...",150.99,35\n

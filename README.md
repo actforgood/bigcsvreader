@@ -12,6 +12,21 @@ It spawns multiple goroutines, each reading a piece of the file.
 Read rows are put into channels equal in number to the spawned goroutines, in this way also the processing of those rows can be parallelized.  
 
 
+### Installation
+
+```shell
+$ go get -u github.com/actforgood/bigcsvreader
+```
+
+### Example
+
+Please refer to this [example](https://pkg.go.dev/github.com/actforgood/bigcsvreader#example-CsvReader).
+
+
+### How it is designed to work
+![BigCsvReader-HowItWorks](docs/how-it-works.svg)
+
+
 ### Benchmarks
 ```
 go test -timeout=20m -benchmem -benchtime=2x -bench=.
