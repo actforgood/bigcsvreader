@@ -44,7 +44,7 @@ type ErrsChan <-chan error
 type CsvReader struct {
 	// MaxGoroutinesNo is the maximum goroutines to start parsing the CSV file.
 	// Minimum required bytes to start a new goroutine is 2048 bytes.
-	// Defaults to `runtime.NumCPU()`.
+	// Defaults to [runtime.NumCPU].
 	MaxGoroutinesNo int
 	// FileHasHeader is a flag indicating if file's first row is the header (columns names).
 	// If so, the header line is disregarded and not returned as a row.
@@ -54,12 +54,12 @@ type CsvReader struct {
 	ColumnsCount int
 	// ColumnsDelimiter is the delimiter char between columns. Defaults to comma.
 	ColumnsDelimiter rune
-	// BufferSize is used internally for `bufio.Reader` size. Has a default value of 4096.
+	// BufferSize is used internally for [bufio.Reader] size. Has a default value of 4096.
 	// If you have lines bigger than this value, adjust it not to get "buffer full" error.
 	BufferSize int
 	// Logger can be set to perform some debugging/error logging.
 	// Defaults to a no-operation logger (no log is performed).
-	// You can enable logging by passing a logger that implements `internal.Logger` contract.
+	// You can enable logging by passing a logger that implements [internal.Logger] contract.
 	Logger internal.Logger
 	// filePath is the CSV file path.
 	filePath string
@@ -260,11 +260,12 @@ func (cr *CsvReader) openFile(thread int, errsChan chan<- error) *os.File {
 	return nil
 }
 
-// readLine reads returns a row from file, or nil if something bad happens or `io.EOF` is encountered.
+// readLine reads returns a row from file, or nil if something bad happens or [io.EOF] is encountered.
 func (cr *CsvReader) readLine(r *bufio.Reader, thread, offsetPos int, errsChan chan<- error) []byte {
-	// did not use `r.ReadLine` as it disregards end line delimiter(s) (\n / \r\n)
+	// did not use [bufio.Reader.ReadLine] as it disregards end line delimiter(s) (\n / \r\n)
 	// and we need the whole line length in advancing offset.
-	// `ReadSlice` also returns the subslice of buffered bytes, without allocating another slice.
+	// [bufio.Reader.ReadSlice] also has the advantage of returning the subslice of buffered bytes,
+	// without allocating another slice.
 	line, err := r.ReadSlice('\n')
 	if err == nil {
 		return line
