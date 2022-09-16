@@ -33,7 +33,7 @@ bench: ## Run benchmarks.
 
 .PHONY: cover
 cover: ## Run tests with coverage. Generates "cover.out" profile and its html representation.
-	go test -race -timeout=5m -coverprofile=cover.out -coverpkg=./... $(go list ./... | grep -v /cmd/)
+	go test -race -timeout=10m -coverprofile=cover.out -coverpkg=./... $(go list ./... | grep -v /cmd/)
 	go tool cover -html=cover.out -o cover.html
 
 .PHONY: tidy
