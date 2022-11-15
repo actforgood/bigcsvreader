@@ -47,6 +47,7 @@ As you can see, bigcsvreader reads and processes all rows in ~`8s`.
 Go standard csv package reads and processes all rows in ~`65s`.  
 `ReadAll` API has the disadvantage of keeping all rows into memory.  
 `Read` rows one by one API with `ReuseRecord` flag set has the advantage of fewer allocations, but has the cost of sequentially reading rows.  
+> Note: It's a coincidence that parallelized version timing was ~equal to sequential timing divided by no of started goroutines. You should not take this as a rule.
 
 Bellow are some process stats captured with unix `TOP` command while running each benchmark.
 | Bench | %CPU | MEM |
@@ -54,6 +55,10 @@ Bellow are some process stats captured with unix `TOP` command while running eac
 | Benchmark50000Rows_50Mb_withBigCsvReader | 21.6 | 8156K |
 | Benchmark50000Rows_50Mb_withGoCsvReaderReadAll | 5.3 | 67M |
 | Benchmark50000Rows_50Mb_withGoCsvReaderReadOneByOneAndReuseRecord | 10.1 | 5704K |
+
+
+**(!) Known issue**:
+This package does not work as expected with multiline columns.
 
 
 ### License

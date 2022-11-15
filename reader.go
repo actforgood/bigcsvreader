@@ -11,6 +11,7 @@ import (
 	"context"
 	"encoding/csv"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path"
@@ -84,7 +85,7 @@ func (cr *CsvReader) SetFilePath(csvFilePath string) {
 	cr.fileBaseName = path.Base(csvFilePath)
 }
 
-// Read extracts asynchronously CSV rows, each started thread putting them into a RowsChan.
+// Read extracts asynchronously CSV rows, each started goroutine putting them into a RowsChan.
 // Error(s) occurred during parsing are sent through ErrsChan.
 func (cr *CsvReader) Read(ctx context.Context) ([]RowsChan, ErrsChan) {
 	cr.Logger.Debug(
@@ -98,10 +99,13 @@ func (cr *CsvReader) Read(ctx context.Context) ([]RowsChan, ErrsChan) {
 	errsChan := make(chan error, chanSize)
 	fileSize, err := cr.getFileSize()
 	if err != nil {
-		errsChan <- err
+		errsChan <- fmt.Errorf(
+			"bigcsvreader: file size error (%w)",
+			err,
+		)
 		close(errsChan)
 		cr.Logger.Error(
-			"msg", "could not get file size",
+			"msg", "file size error",
 			"err", err,
 			"file", cr.fileBaseName,
 		)
@@ -204,7 +208,10 @@ ForLoop:
 		select {
 		case <-ctx.Done():
 			if ctx.Err() != nil {
-				errsChan <- ctx.Err()
+				errsChan <- fmt.Errorf(
+					"bigcsvreader: thread #%d received context error (%w)",
+					currentThreadNo, ctx.Err(),
+				)
 			}
 
 			return
@@ -218,7 +225,10 @@ ForLoop:
 			bytesReader.Reset(line)
 			record, err := csvReader.Read()
 			if err != nil {
-				errsChan <- err
+				errsChan <- fmt.Errorf(
+					"bigcsvreader: thread #%d could not parse row at offset %d (%w)",
+					currentThreadNo, currentOffsetPos, err,
+				)
 				cr.Logger.Error(
 					"msg", "could not parse row", "err", err,
 					"file", cr.fileBaseName, "thread", currentThreadNo,
@@ -251,7 +261,10 @@ func (cr *CsvReader) openFile(thread int, errsChan chan<- error) *os.File {
 		return f
 	}
 
-	errsChan <- err
+	errsChan <- fmt.Errorf(
+		"bigcsvreader: thread #%d could not open file (%w)",
+		thread, err,
+	)
 	cr.Logger.Error(
 		"msg", "could not open file", "err", err,
 		"file", cr.fileBaseName, "thread", thread,
@@ -275,7 +288,10 @@ func (cr *CsvReader) readLine(r *bufio.Reader, thread, offsetPos int, errsChan c
 			return line
 		}
 	} else {
-		errsChan <- err
+		errsChan <- fmt.Errorf(
+			"bigcsvreader: thread #%d could not read line at offset %d (%w)",
+			thread, offsetPos, err,
+		)
 		cr.Logger.Error(
 			"msg", "could not read line", "err", err,
 			"file", cr.fileBaseName, "thread", thread,
