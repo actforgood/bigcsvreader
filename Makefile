@@ -1,8 +1,9 @@
-LINTER_VERSION=v1.50.1
+LINTER_VERSION=v1.53.3
 LINTER=./bin/golangci-lint
 ifeq ($(OS),Windows_NT)
 	LINTER=./bin/golangci-lint.exe
 endif
+pkgs=$(shell go list ./... | grep -v /cmd/)
 
 .PHONY: all
 all: clean setup lint test ## Run sequentially clean, setup, lint and test.
@@ -25,15 +26,15 @@ setup: ## Download dependencies.
 
 .PHONY: test
 test: ## Run tests (with race condition detection).
-	go test -race -timeout=10m $(go list ./... | grep -v /cmd/)
+	go test -race -timeout=10m $(pkgs)
 
 .PHONY: bench
 bench: ## Run benchmarks.
-	go test -race -timeout=15m -benchmem -benchtime=2x -bench $(go list ./... | grep -v /cmd/)
+	go test -race -timeout=15m -benchmem -benchtime=2x -bench .
 
 .PHONY: cover
 cover: ## Run tests with coverage. Generates "cover.out" profile and its html representation.
-	go test -race -timeout=10m -coverprofile=cover.out -coverpkg=./... $(go list ./... | grep -v /cmd/)
+	go test -race -timeout=10m -coverprofile=cover.out -coverpkg=./... $(pkgs)
 	go tool cover -html=cover.out -o cover.html
 
 .PHONY: tidy
