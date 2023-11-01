@@ -67,6 +67,9 @@ type CsvReader struct {
 	// fileBaseName is the base name of the file extracted from filePath.
 	// Is used in logging.
 	fileBaseName string
+	// LazyQuotes is a flag used to allow quotes in an unquoted field and non-doubled quotes
+	// in a quoted field
+	LazyQuotes bool
 }
 
 // New instantiates a new CsvReader object with some default fields preset.
@@ -202,6 +205,7 @@ func (cr *CsvReader) readBetweenOffsetsAsync(
 	csvReader := csv.NewReader(bytesReader)
 	csvReader.Comma = cr.ColumnsDelimiter
 	csvReader.FieldsPerRecord = cr.ColumnsCount
+	csvReader.LazyQuotes = cr.LazyQuotes
 
 ForLoop:
 	for {
