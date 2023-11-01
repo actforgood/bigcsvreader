@@ -36,6 +36,7 @@ func TestCsvReader(t *testing.T) {
 	t.Run("context is canceled", testCsvReaderWithContextCanceled)
 	t.Run("invalid row", testCsvReaderWithInvalidRow)
 	t.Run("small buffer size", testCsvReaderWithSmallBufferSize)
+	t.Run("quotes in unquoted field", testCsvReaderWithLazyQuotes)
 }
 
 func testCsvReaderByHeader(withHeader bool) func(t *testing.T) {
@@ -176,6 +177,49 @@ func testCsvReaderWithDifferentFileSizesAndMaxGoroutines(rowsCount int64) func(t
 			}
 			wg.Wait()
 			assertEqual(t, expectedSumIds, sumIds)
+		}
+	}
+}
+
+func testCsvReaderWithLazyQuotes(t *testing.T) {
+	t.Parallel()
+
+	// arrange
+	subject := bigcsvreader.New()
+	subject.SetFilePath("testdata/file_with_quote_in_unquoted_field.csv")
+	subject.ColumnsCount = 3
+	subject.FileHasHeader = false
+	subject.LazyQuotes = true
+
+	expectedRecords := [][]string{
+		{"1", "John \"The Bomb\" Miguel", "33"},
+		{"2", "Jane", "30"},
+		{"3", "Mike", "18"},
+		{"4", "Ronaldinho", "23"},
+		{"5", "Elisabeth", "45"},
+	}
+
+	ctx, cancelCtx := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancelCtx()
+
+	// act
+	rowsChans, errsChan := subject.Read(ctx)
+	records, err := gatherRecords(rowsChans, errsChan)
+
+	// assert
+	assertNil(t, err)
+	assertEqual(t, len(expectedRecords), len(records))
+	for _, expectedRecord := range expectedRecords {
+		found := false
+		for _, record := range records {
+			if reflect.DeepEqual(expectedRecord, record) {
+				found = true
+
+				break
+			}
+		}
+		if !found {
+			t.Errorf("record '%v' was expected to be found, but was not", expectedRecord)
 		}
 	}
 }
