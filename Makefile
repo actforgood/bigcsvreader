@@ -1,4 +1,4 @@
-LINTER_VERSION=v1.53.3
+LINTER_VERSION=v1.55.2
 LINTER=./bin/golangci-lint
 ifeq ($(OS),Windows_NT)
 	LINTER=./bin/golangci-lint.exe
