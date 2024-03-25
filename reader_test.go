@@ -140,13 +140,13 @@ func testCsvReaderWithDifferentFileSizesAndMaxGoroutines(rowsCount int64) func(t
 		subject.ColumnsCount = 5
 		ctx, cancelCtx := context.WithCancel(context.Background())
 		defer cancelCtx()
-		var sumIds int64
+		var sumIDs int64
 		var wg sync.WaitGroup
 
 		for maxGoroutines := 1; maxGoroutines <= 16; maxGoroutines++ {
 			subject.MaxGoroutinesNo = maxGoroutines
-			sumIds = 0
-			expectedSumIds := rowsCount * (rowsCount + 1) / 2
+			sumIDs = 0
+			expectedSumIDs := rowsCount * (rowsCount + 1) / 2
 
 			// act
 			rowsChans, errsChan := subject.Read(ctx)
@@ -155,20 +155,20 @@ func testCsvReaderWithDifferentFileSizesAndMaxGoroutines(rowsCount int64) func(t
 			for i := 0; i < len(rowsChans); i++ {
 				wg.Add(1)
 				go func(rowsChan bigcsvreader.RowsChan, waitGr *sync.WaitGroup) {
-					var localSumIds int64
+					var localSumIDs int64
 					for record := range rowsChan {
 						if !assertEqual(t, 5, len(record)) {
 							continue
 						}
 						id, _ := strconv.ParseInt(record[colID], 10, 64)
-						localSumIds += id
+						localSumIDs += id
 						expectedColName := colValueNamePrefix + record[colID]
 						assertEqual(t, expectedColName, record[colName])
 						assertEqual(t, colValueDescription, record[colDescription])
 						assertEqual(t, colValuePrice, record[colPrice])
 						assertEqual(t, colValueStock, record[colStock])
 					}
-					atomic.AddInt64(&sumIds, localSumIds)
+					atomic.AddInt64(&sumIDs, localSumIDs)
 					waitGr.Done()
 				}(rowsChans[i], &wg)
 			}
@@ -176,7 +176,7 @@ func testCsvReaderWithDifferentFileSizesAndMaxGoroutines(rowsCount int64) func(t
 				assertNil(t, err)
 			}
 			wg.Wait()
-			assertEqual(t, expectedSumIds, sumIds)
+			assertEqual(t, expectedSumIDs, sumIDs)
 		}
 	}
 }
@@ -443,7 +443,7 @@ func consumeBenchResults(rowsChans []bigcsvreader.RowsChan, _ bigcsvreader.ErrsC
 	return count
 }
 
-func benchmarkGoCsvReaderReadAll(rowsCount int64) func(b *testing.B) {
+func benchmarkStdGoCsvReaderReadAll(rowsCount int64) func(b *testing.B) {
 	return func(b *testing.B) {
 		fName, err := setUpTmpCsvFile(rowsCount)
 		if err != nil {
@@ -481,7 +481,7 @@ func benchmarkGoCsvReaderReadAll(rowsCount int64) func(b *testing.B) {
 	}
 }
 
-func benchmarkGoCsvReaderReadOneByOneWithReuseRecord(rowsCount int64) func(b *testing.B) {
+func benchmarkStdGoCsvReaderReadOneByOneWithReuseRecord(rowsCount int64) func(b *testing.B) {
 	return func(b *testing.B) {
 		fName, err := setUpTmpCsvFile(rowsCount)
 		if err != nil {
@@ -524,7 +524,7 @@ func benchmarkGoCsvReaderReadOneByOneWithReuseRecord(rowsCount int64) func(b *te
 	}
 }
 
-func benchmarkGoCsvReaderReadOneByOneProcessParalell(rowsCount int64) func(b *testing.B) {
+func benchmarkStdGoCsvReaderReadOneByOneProcessParalell(rowsCount int64) func(b *testing.B) {
 	return func(b *testing.B) {
 		fName, err := setUpTmpCsvFile(rowsCount)
 		if err != nil {
@@ -591,14 +591,14 @@ func Benchmark50000Rows_50Mb_withBigCsvReader(b *testing.B) {
 	benchmarkBigCsvReader(5e4)(b)
 }
 
-func Benchmark50000Rows_50Mb_withGoCsvReaderReadAll(b *testing.B) {
-	benchmarkGoCsvReaderReadAll(5e4)(b)
+func Benchmark50000Rows_50Mb_withStdGoCsvReaderReadAll(b *testing.B) {
+	benchmarkStdGoCsvReaderReadAll(5e4)(b)
 }
 
-func Benchmark50000Rows_50Mb_withGoCsvReaderReadOneByOneAndReuseRecord(b *testing.B) {
-	benchmarkGoCsvReaderReadOneByOneWithReuseRecord(5e4)(b)
+func Benchmark50000Rows_50Mb_withStdGoCsvReaderReadOneByOneAndReuseRecord(b *testing.B) {
+	benchmarkStdGoCsvReaderReadOneByOneWithReuseRecord(5e4)(b)
 }
 
-func Benchmark50000Rows_50Mb_withGoCsvReaderReadOneByOneProcessParalell(b *testing.B) {
-	benchmarkGoCsvReaderReadOneByOneProcessParalell(5e4)(b)
+func Benchmark50000Rows_50Mb_withStdGoCsvReaderReadOneByOneProcessParalell(b *testing.B) {
+	benchmarkStdGoCsvReaderReadOneByOneProcessParalell(5e4)(b)
 }
