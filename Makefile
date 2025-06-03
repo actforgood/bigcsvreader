@@ -1,4 +1,4 @@
-LINTER_VERSION=v1.57.1
+LINTER_VERSION=v2.1.6
 LINTER=./bin/golangci-lint
 ifeq ($(OS),Windows_NT)
 	LINTER=./bin/golangci-lint.exe
@@ -10,7 +10,7 @@ all: clean setup lint test ## Run sequentially clean, setup, lint and test.
 
 .PHONY: lint
 lint: ## Run linter and detect go mod tidy changes.
-	$(LINTER) run -c ./.golangci-lint.yml --fix
+	$(LINTER) run -c ./.golangci.yml --fix
 	@make tidy
 	@if ! git diff --quiet; then \
 		echo "'go mod tidy' resulted in changes or working tree is dirty:"; \

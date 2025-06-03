@@ -117,18 +117,17 @@ func TestComputeGoroutineOffsets(t *testing.T) {
 	}
 
 	for _, testData := range tests {
-		test := testData // capture range variable
-		t.Run(test.name, func(t *testing.T) {
+		t.Run(testData.name, func(t *testing.T) {
 			// act
 			result := internal.ComputeGoroutineOffsets(
-				test.inputTotalBytes,
-				test.inputMaxGoroutines,
-				test.inputMinBytesReadByAGoroutine,
+				testData.inputTotalBytes,
+				testData.inputMaxGoroutines,
+				testData.inputMinBytesReadByAGoroutine,
 			)
 
 			// assert
-			if !reflect.DeepEqual(result, test.expectedResult) {
-				t.Errorf("expected %v, but got %v | %s", test.expectedResult, result, test.name)
+			if !reflect.DeepEqual(result, testData.expectedResult) {
+				t.Errorf("expected %v, but got %v | %s", testData.expectedResult, result, testData.name)
 			}
 		})
 	}
@@ -136,21 +135,21 @@ func TestComputeGoroutineOffsets(t *testing.T) {
 
 func BenchmarkComputeGoroutineOffsets_1(b *testing.B) {
 	b.ReportAllocs()
-	for n := 0; n < b.N; n++ {
+	for range b.N {
 		_ = internal.ComputeGoroutineOffsets(1024, 32, 1)
 	}
 }
 
 func BenchmarkComputeGoroutineOffsets_2(b *testing.B) {
 	b.ReportAllocs()
-	for n := 0; n < b.N; n++ {
+	for range b.N {
 		_ = internal.ComputeGoroutineOffsets(1024, 32, 1025)
 	}
 }
 
 func BenchmarkComputeGoroutineOffsets_3(b *testing.B) {
 	b.ReportAllocs()
-	for n := 0; n < b.N; n++ {
+	for range b.N {
 		_ = internal.ComputeGoroutineOffsets(1024, 32, 1023)
 	}
 }

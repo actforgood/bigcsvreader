@@ -130,11 +130,10 @@ func testCsvReaderWithDifferentFileSizesAndMaxGoroutines(rowsCount int64) func(t
 		t.Parallel()
 
 		// arrange
-		fName, err := setUpTmpCsvFile(rowsCount)
+		fName, err := setUpTmpCsvFile(t.TempDir(), rowsCount)
 		if err != nil {
 			t.Fatalf("prerequisite failed: could not generate CSV file: %v", err)
 		}
-		defer tearDownTmpCsvFile(fName)
 		subject := bigcsvreader.New()
 		subject.SetFilePath(fName)
 		subject.ColumnsCount = 5
@@ -152,7 +151,7 @@ func testCsvReaderWithDifferentFileSizesAndMaxGoroutines(rowsCount int64) func(t
 			rowsChans, errsChan := subject.Read(ctx)
 
 			// assert
-			for i := 0; i < len(rowsChans); i++ {
+			for i := range rowsChans {
 				wg.Add(1)
 				go func(rowsChan bigcsvreader.RowsChan, waitGr *sync.WaitGroup) {
 					var localSumIDs int64
@@ -297,7 +296,7 @@ func gatherRecords(rowsChans []bigcsvreader.RowsChan, errsChan bigcsvreader.Errs
 		wg      sync.WaitGroup
 		records = make([][]string, 0)
 	)
-	for i := 0; i < len(rowsChans); i++ {
+	for i := range rowsChans {
 		wg.Add(1)
 		go func(rowsChan bigcsvreader.RowsChan, mutex *sync.Mutex, waitGr *sync.WaitGroup) {
 			for record := range rowsChan {
@@ -339,16 +338,17 @@ const (
 //	1,Product_1,"Lorem ipsum...",150.99,35\n
 //	2,Product_2,"Lorem ipsum...",150.99,35\n
 //	<idIncremented>, Product_<id>, static text: Lorem ipsum..., static price: 150.99, static stock qty: 35 EOL
-func setUpTmpCsvFile(rowsCount int64) (string, error) {
+func setUpTmpCsvFile(tmpDir string, rowsCount int64) (string, error) {
 	filePattern := "bigcsvreader_" + strconv.FormatInt(rowsCount, 10) + "-*.csv"
-	f, err := os.CreateTemp("", filePattern)
+	f, err := os.CreateTemp(tmpDir, filePattern)
 	if err != nil {
 		return "", err
 	}
+	defer f.Close()
 	fName := f.Name()
 
 	var id int64
-	var buf = make([]byte, 0, 1280)
+	buf := make([]byte, 0, 1280)
 	bufLenConst := 4 + 2 + 1 + len(colValueNamePrefix) + len(colValueDescription) + len(colValuePrice) + len(colValueStock) // 4 x comma, 2 x quote, 1 x \n,
 	for id = 1; id <= rowsCount; id++ {
 		buf = buf[0:0:1280]
@@ -365,23 +365,13 @@ func setUpTmpCsvFile(rowsCount int64) (string, error) {
 		buf = append(buf, colValueStock...)
 		buf = append(buf, "\n"...)
 		bufLen := bufLenConst + 2*len(idStr)
-		_, err := f.Write(buf[0:bufLen])
+		_, err := f.Write(buf[:bufLen])
 		if err != nil {
-			_ = f.Close()
-			tearDownTmpCsvFile(fName)
-
 			return "", err
 		}
 	}
 
-	_ = f.Close()
-
 	return fName, nil
-}
-
-// tearDownTmpCsvFile deletes the file provided.
-func tearDownTmpCsvFile(filePath string) {
-	_ = os.Remove(filePath)
 }
 
 // fakeProcessRow simulates the processing a row from the CSV file.
@@ -393,11 +383,10 @@ func fakeProcessRow(_ []string) {
 
 func benchmarkBigCsvReader(rowsCount int64) func(b *testing.B) {
 	return func(b *testing.B) {
-		fName, err := setUpTmpCsvFile(rowsCount)
+		fName, err := setUpTmpCsvFile(b.TempDir(), rowsCount)
 		if err != nil {
 			b.Fatalf("prerequisite failed: could not generate CSV file: %v", err)
 		}
-		defer tearDownTmpCsvFile(fName)
 		subject := bigcsvreader.New()
 		subject.SetFilePath(fName)
 		subject.ColumnsCount = 5
@@ -409,7 +398,7 @@ func benchmarkBigCsvReader(rowsCount int64) func(b *testing.B) {
 		b.ReportAllocs()
 		b.ResetTimer()
 
-		for n := 0; n < b.N; n++ {
+		for range b.N {
 			rowsChans, errsChan := subject.Read(ctx)
 			count = consumeBenchResults(rowsChans, errsChan)
 			if count != rowsCount {
@@ -426,7 +415,7 @@ func consumeBenchResults(rowsChans []bigcsvreader.RowsChan, _ bigcsvreader.ErrsC
 		wg    sync.WaitGroup
 	)
 
-	for i := 0; i < len(rowsChans); i++ {
+	for i := range rowsChans {
 		wg.Add(1)
 		go func(rowsChan bigcsvreader.RowsChan, waitGr *sync.WaitGroup) {
 			var localCount int64
@@ -445,17 +434,16 @@ func consumeBenchResults(rowsChans []bigcsvreader.RowsChan, _ bigcsvreader.ErrsC
 
 func benchmarkStdGoCsvReaderReadAll(rowsCount int64) func(b *testing.B) {
 	return func(b *testing.B) {
-		fName, err := setUpTmpCsvFile(rowsCount)
+		fName, err := setUpTmpCsvFile(b.TempDir(), rowsCount)
 		if err != nil {
 			b.Fatalf("prerequisite failed: could not generate CSV file: %v", err)
 		}
-		defer tearDownTmpCsvFile(fName)
 		var count int64
 
 		b.ReportAllocs()
 		b.ResetTimer()
 
-		for n := 0; n < b.N; n++ {
+		for range b.N {
 			f, err := os.Open(fName)
 			if err != nil {
 				b.Fatal(err)
@@ -483,17 +471,16 @@ func benchmarkStdGoCsvReaderReadAll(rowsCount int64) func(b *testing.B) {
 
 func benchmarkStdGoCsvReaderReadOneByOneWithReuseRecord(rowsCount int64) func(b *testing.B) {
 	return func(b *testing.B) {
-		fName, err := setUpTmpCsvFile(rowsCount)
+		fName, err := setUpTmpCsvFile(b.TempDir(), rowsCount)
 		if err != nil {
 			b.Fatalf("prerequisite failed: could not generate CSV file: %v", err)
 		}
-		defer tearDownTmpCsvFile(fName)
 		var count int64
 
 		b.ReportAllocs()
 		b.ResetTimer()
 
-		for n := 0; n < b.N; n++ {
+		for range b.N {
 			f, err := os.Open(fName)
 			if err != nil {
 				b.Fatal(err)
@@ -526,25 +513,24 @@ func benchmarkStdGoCsvReaderReadOneByOneWithReuseRecord(rowsCount int64) func(b 
 
 func benchmarkStdGoCsvReaderReadOneByOneProcessParalell(rowsCount int64) func(b *testing.B) {
 	return func(b *testing.B) {
-		fName, err := setUpTmpCsvFile(rowsCount)
+		fName, err := setUpTmpCsvFile(b.TempDir(), rowsCount)
 		if err != nil {
 			b.Fatalf("prerequisite failed: could not generate CSV file: %v", err)
 		}
-		defer tearDownTmpCsvFile(fName)
 
 		numWorkers := runtime.GOMAXPROCS(0)
 
 		b.ReportAllocs()
 		b.ResetTimer()
 
-		for n := 0; n < b.N; n++ {
+		for range b.N {
 			// setup workers for parallel processing
 			rowsChan := make(chan []string, numWorkers)
 			var (
 				count int64
 				wg    sync.WaitGroup
 			)
-			for i := 0; i < numWorkers; i++ {
+			for range numWorkers {
 				wg.Add(1)
 				go func() {
 					var localCount int64
@@ -587,6 +573,7 @@ func benchmarkStdGoCsvReaderReadOneByOneProcessParalell(rowsCount int64) func(b 
 		}
 	}
 }
+
 func Benchmark50000Rows_50Mb_withBigCsvReader(b *testing.B) {
 	benchmarkBigCsvReader(5e4)(b)
 }

@@ -93,7 +93,7 @@ func setUpTmpCsvFile(rowsCount int64) (string, error) {
 	fName := f.Name()
 
 	var id int64
-	var buf = make([]byte, 0, 1280)
+	buf := make([]byte, 0, 1280)
 	bufLenConst := 4 + 2 + 1 + len(colValueNamePrefix) + len(colValueDescription) + len(colValuePrice) + len(colValueStock) // 4 x comma, 2 x quote, 1 x \n,
 	for id = 1; id <= rowsCount; id++ {
 		buf = buf[0:0:1280]
@@ -110,7 +110,7 @@ func setUpTmpCsvFile(rowsCount int64) (string, error) {
 		buf = append(buf, colValueStock...)
 		buf = append(buf, "\n"...)
 		bufLen := bufLenConst + 2*len(idStr)
-		_, err := f.Write(buf[0:bufLen])
+		_, err := f.Write(buf[:bufLen])
 		if err != nil {
 			_ = f.Close()
 			tearDownTmpCsvFile(fName)
@@ -205,7 +205,7 @@ func consumeBigCsvReaderResults(rowsChans []bigcsvreader.RowsChan, errsChan bigc
 		wg    sync.WaitGroup
 	)
 
-	for i := 0; i < len(rowsChans); i++ {
+	for i := range rowsChans {
 		wg.Add(1)
 		go func(rowsChan bigcsvreader.RowsChan, waitGr *sync.WaitGroup) {
 			var localCount int64

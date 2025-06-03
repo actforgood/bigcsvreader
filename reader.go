@@ -126,7 +126,7 @@ func (cr *CsvReader) Read(ctx context.Context) ([]RowsChan, ErrsChan) {
 
 	rowsChans := make([]RowsChan, totalThreads)
 	rowsChs := make([]chan<- []string, totalThreads)
-	for i := 0; i < totalThreads; i++ {
+	for i := range totalThreads {
 		rowsChan := make(chan []string, chanSize)
 		rowsChans[i] = rowsChan
 		rowsChs[i] = rowsChan
@@ -145,7 +145,7 @@ func (cr *CsvReader) readAsync(
 ) {
 	defer func() {
 		close(errsChan)
-		for i := 0; i < len(rowsChans); i++ {
+		for i := range rowsChans {
 			close(rowsChans[i])
 		}
 	}()
@@ -155,7 +155,7 @@ func (cr *CsvReader) readAsync(
 	var wg sync.WaitGroup
 	wg.Add(totalThreads)
 	worker := cr.readBetweenOffsetsAsync
-	for thread := 0; thread < totalThreads; thread++ {
+	for thread := range totalThreads {
 		go worker(
 			ctx,
 			thread+1,

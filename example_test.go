@@ -48,7 +48,7 @@ func ExampleCsvReader() {
 
 	// process rows and errors:
 
-	for i := 0; i < len(rowsChans); i++ {
+	for i := range rowsChans {
 		wg.Add(1)
 		go rowWorker(rowsChans[i], &wg)
 	}

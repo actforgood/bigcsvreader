@@ -9,16 +9,16 @@ package internal
 // Logger logs information while processing a CSV file.
 type Logger interface {
 	// Debug logs debug information.
-	Debug(keyValues ...interface{})
+	Debug(keyValues ...any)
 	// Error logs any error occurred.
-	Error(keyValues ...interface{})
+	Error(keyValues ...any)
 }
 
 // NopLogger does not log anything.
 type NopLogger struct{}
 
 // Debug does nothing.
-func (NopLogger) Debug(...interface{}) {}
+func (NopLogger) Debug(...any) {}
 
 // Error does nothing.
-func (NopLogger) Error(...interface{}) {}
+func (NopLogger) Error(...any) {}

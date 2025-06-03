@@ -14,7 +14,7 @@ import (
 
 // assertEqual checks if 2 values are equal.
 // Returns successful assertion status.
-func assertEqual(t *testing.T, expected interface{}, actual interface{}) bool {
+func assertEqual(t *testing.T, expected, actual any) bool {
 	t.Helper()
 	if !reflect.DeepEqual(expected, actual) {
 		t.Errorf(
@@ -32,7 +32,7 @@ func assertEqual(t *testing.T, expected interface{}, actual interface{}) bool {
 
 // assertNotNil checks if value passed is not nil.
 // Returns successful assertion status.
-func assertNotNil(t *testing.T, actual interface{}) bool {
+func assertNotNil(t *testing.T, actual any) bool {
 	t.Helper()
 	if isNil(actual) {
 		t.Error("should not be nil")
@@ -45,7 +45,7 @@ func assertNotNil(t *testing.T, actual interface{}) bool {
 
 // assertNil checks if value passed is nil.
 // Returns successful assertion status.
-func assertNil(t *testing.T, actual interface{}) bool {
+func assertNil(t *testing.T, actual any) bool {
 	t.Helper()
 	if !isNil(actual) {
 		t.Errorf("expected nil, but got %+v", actual)
@@ -70,7 +70,7 @@ func assertTrue(t *testing.T, actual bool) bool {
 }
 
 // isNil checks an interface if it is nil.
-func isNil(object interface{}) bool {
+func isNil(object any) bool {
 	if object == nil {
 		return true
 	}

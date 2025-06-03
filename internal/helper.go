@@ -38,7 +38,7 @@ func ComputeGoroutineOffsets(totalBytes, maxGoroutines, minBytesReadByAGoroutine
 	bytesPerGoroutine := totalBytes / totalGoroutines
 	distribution := make([][2]int, totalGoroutines)
 	start, end := 0, bytesPerGoroutine-1
-	for goroutineNo := 0; goroutineNo < totalGoroutines-1; goroutineNo++ {
+	for goroutineNo := range totalGoroutines - 1 {
 		distribution[goroutineNo] = [2]int{start, end}
 		start = end + 1
 		end += bytesPerGoroutine
