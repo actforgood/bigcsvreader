@@ -44,7 +44,7 @@ jobs:
       run: make clean cover
 
     - name: Upload coverage to coveralls.io
-      if: matrix.platform == 'ubuntu-latest' && matrix.go-version == '1.22.x'
+      if: matrix.platform == 'ubuntu-latest' && matrix.go-version == '1.24.x'
       uses: coverallsapp/github-action@v2
       with:
         file: cover.out
