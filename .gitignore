@@ -7,7 +7,3 @@ bin/*
 *.exe
 *.exe~
 *.so
-
-cover.out
-cover.html
-*.prof

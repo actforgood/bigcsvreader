@@ -38,7 +38,7 @@ func main() {
 	defer tearDownTmpCsvFile(fName)
 
 	// enable cpu profiling
-	fCPU, err := os.Create("./cpu_" + *generateProfileFor + ".prof")
+	fCPU, err := os.Create("./bin/cpu_" + *generateProfileFor + ".prof")
 	if err != nil {
 		log.Println("could not create CPU profile: ", err)
 
@@ -62,7 +62,7 @@ func main() {
 	}
 
 	// enable memory profiling
-	fMem, err := os.Create("./mem_" + *generateProfileFor + ".prof")
+	fMem, err := os.Create("./bin/mem_" + *generateProfileFor + ".prof")
 	if err != nil {
 		log.Println("could not create memory profile: ", err)
 
@@ -206,25 +206,22 @@ func consumeBigCsvReaderResults(rowsChans []bigcsvreader.RowsChan, errsChan bigc
 	)
 
 	for i := range rowsChans {
-		wg.Add(1)
-		go func(rowsChan bigcsvreader.RowsChan, waitGr *sync.WaitGroup) {
+		wg.Go(func() {
+			rowsChan := rowsChans[i]
 			var localCount int64
 			for record := range rowsChan {
 				localCount++
 				_ = record
 			}
 			atomic.AddInt64(&count, localCount)
-			waitGr.Done()
-		}(rowsChans[i], &wg)
+		})
 	}
 
-	wg.Add(1)
-	go func(errsCh bigcsvreader.ErrsChan, waitGr *sync.WaitGroup) {
-		for err := range errsCh {
+	wg.Go(func() {
+		for err := range errsChan {
 			log.Println("Read error: ", err)
 		}
-		waitGr.Done()
-	}(errsChan, &wg)
+	})
 
 	wg.Wait()
 

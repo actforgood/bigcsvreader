@@ -47,15 +47,14 @@ func ExampleCsvReader() {
 	rowsChans, errsChan := bigCSV.Read(ctx)
 
 	// process rows and errors:
-
 	for i := range rowsChans {
-		wg.Add(1)
-		go rowWorker(rowsChans[i], &wg)
+		wg.Go(func() {
+			rowWorker(rowsChans[i])
+		})
 	}
-
-	wg.Add(1)
-	go errWorker(errsChan, &wg)
-
+	wg.Go(func() {
+		errWorker(errsChan)
+	})
 	wg.Wait()
 
 	// Unordered output:
@@ -66,18 +65,16 @@ func ExampleCsvReader() {
 	// {ID:5 Name:Logitech Mouse G203 Desc:Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc eleifend felis quis magna auctor, ut lacinia eros efficitur. Maecenas mattis dolor a pharetra gravida. Aenean at eros sed metus posuere feugiat in vitae libero. Morbi a diam volutpat, tempor lacus sed, sagittis velit. Donec eget dignissim mauris, sed aliquam ex. Duis eros dolor, vestibulum ac aliquam eget, viverra in enim. Aenean ut turpis quis purus porta lobortis. Etiam sollicitudin lectus vitae velit tincidunt, ut volutpat justo aliquam. Aenean vitae vehicula arcu. Interdum et malesuada fames ac ante ipsum primis in faucibus. Nunc viverra enim nec risus mollis elementum nec dictum ex. Nunc lorem eros, vulputate a rutrum nec, scelerisque non augue. Sed in egestas eros. Quisque felis lorem, vehicula ac venenatis vel, tristique id sapien. Morbi vitae odio eget orci facilisis suscipit. Cras sodales, augue vitae tincidunt tempus, diam turpis volutpat est, vitae fringilla augue leo semper augue. Integer scelerisque tempor mauris, ac posuere sem aenean Price:30.5 Qty:35}
 }
 
-func rowWorker(rowsChan bigcsvreader.RowsChan, waitGr *sync.WaitGroup) {
+func rowWorker(rowsChan bigcsvreader.RowsChan) {
 	for row := range rowsChan {
 		processRow(row)
 	}
-	waitGr.Done()
 }
 
-func errWorker(errsChan bigcsvreader.ErrsChan, waitGr *sync.WaitGroup) {
+func errWorker(errsChan bigcsvreader.ErrsChan) {
 	for err := range errsChan {
 		handleError(err)
 	}
-	waitGr.Done()
 }
 
 // processRow can be used to implement business logic

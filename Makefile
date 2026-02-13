@@ -1,4 +1,4 @@
-LINTER_VERSION=v2.1.6
+LINTER_VERSION=v2.9.0
 LINTER=./bin/golangci-lint
 ifeq ($(OS),Windows_NT)
 	LINTER=./bin/golangci-lint.exe
@@ -19,6 +19,7 @@ lint: ## Run linter and detect go mod tidy changes.
 
 .PHONY: setup
 setup: ## Download dependencies.
+	@mkdir -p bin
 	go mod download
 	@if [ ! -f "$(LINTER)" ]; then \
 		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s $(LINTER_VERSION); \
@@ -34,8 +35,8 @@ bench: ## Run benchmarks.
 
 .PHONY: cover
 cover: ## Run tests with coverage. Generates "cover.out" profile and its html representation.
-	go test -race -timeout=10m -coverprofile=cover.out -coverpkg=./... $(pkgs)
-	go tool cover -html=cover.out -o cover.html
+	go test -race -timeout=10m -coverprofile=./bin/cover.out -coverpkg=./... $(pkgs)
+	go tool cover -html=./bin/cover.out -o ./bin/cover.html
 
 .PHONY: tidy
 tidy: ## Simply runs 'go mod tidy'.
@@ -44,12 +45,8 @@ tidy: ## Simply runs 'go mod tidy'.
 .PHONY: clean
 clean: ## Clean up go tests cache and coverage generated files.
 	go clean -testcache
-	@for file in cover.html cover.out; do \
-		if [ -f $$file ]; then \
-			echo "rm -f $$file"; \
-			rm -f $$file; \
-		fi \
-	done
+	@rm -f ./bin/cover*
+	@rm -f ./bin/*.prof
 
 .PHONY: help
 # Absolutely awesome: https://marmelab.com/blog/2016/02/29/auto-documented-makefile.html

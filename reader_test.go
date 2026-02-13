@@ -18,6 +18,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/actforgood/bigcsvreader"
@@ -129,54 +130,53 @@ func testCsvReaderWithDifferentFileSizesAndMaxGoroutines(rowsCount int64) func(t
 	return func(t *testing.T) {
 		t.Parallel()
 
-		// arrange
-		fName, err := setUpTmpCsvFile(t.TempDir(), rowsCount)
-		if err != nil {
-			t.Fatalf("prerequisite failed: could not generate CSV file: %v", err)
-		}
-		subject := bigcsvreader.New()
-		subject.SetFilePath(fName)
-		subject.ColumnsCount = 5
-		ctx, cancelCtx := context.WithCancel(context.Background())
-		defer cancelCtx()
-		var sumIDs int64
-		var wg sync.WaitGroup
+		synctest.Test(t, func(*testing.T) {
+			// arrange
+			fName, err := setUpTmpCsvFile(t.TempDir(), rowsCount)
+			if err != nil {
+				t.Fatalf("prerequisite failed: could not generate CSV file: %v", err)
+			}
+			subject := bigcsvreader.New()
+			subject.SetFilePath(fName)
+			subject.ColumnsCount = 5
+			ctx, cancelCtx := context.WithCancel(context.Background())
+			defer cancelCtx()
+			var sumIDs int64
 
-		for maxGoroutines := 1; maxGoroutines <= 16; maxGoroutines++ {
-			subject.MaxGoroutinesNo = maxGoroutines
-			sumIDs = 0
-			expectedSumIDs := rowsCount * (rowsCount + 1) / 2
+			for maxGoroutines := range 16 {
+				subject.MaxGoroutinesNo = maxGoroutines + 1
+				sumIDs = 0
+				expectedSumIDs := rowsCount * (rowsCount + 1) / 2
 
-			// act
-			rowsChans, errsChan := subject.Read(ctx)
+				// act
+				rowsChans, errsChan := subject.Read(ctx)
 
-			// assert
-			for i := range rowsChans {
-				wg.Add(1)
-				go func(rowsChan bigcsvreader.RowsChan, waitGr *sync.WaitGroup) {
-					var localSumIDs int64
-					for record := range rowsChan {
-						if !assertEqual(t, 5, len(record)) {
-							continue
+				// assert
+				for i := range rowsChans {
+					go func(rowsChan bigcsvreader.RowsChan) {
+						var localSumIDs int64
+						for record := range rowsChan {
+							if !assertEqual(t, 5, len(record)) {
+								continue
+							}
+							id, _ := strconv.ParseInt(record[colID], 10, 64)
+							localSumIDs += id
+							expectedColName := colValueNamePrefix + record[colID]
+							assertEqual(t, expectedColName, record[colName])
+							assertEqual(t, colValueDescription, record[colDescription])
+							assertEqual(t, colValuePrice, record[colPrice])
+							assertEqual(t, colValueStock, record[colStock])
 						}
-						id, _ := strconv.ParseInt(record[colID], 10, 64)
-						localSumIDs += id
-						expectedColName := colValueNamePrefix + record[colID]
-						assertEqual(t, expectedColName, record[colName])
-						assertEqual(t, colValueDescription, record[colDescription])
-						assertEqual(t, colValuePrice, record[colPrice])
-						assertEqual(t, colValueStock, record[colStock])
-					}
-					atomic.AddInt64(&sumIDs, localSumIDs)
-					waitGr.Done()
-				}(rowsChans[i], &wg)
+						atomic.AddInt64(&sumIDs, localSumIDs)
+					}(rowsChans[i])
+				}
+				for err := range errsChan {
+					assertNil(t, err)
+				}
+				synctest.Wait()
+				assertEqual(t, expectedSumIDs, sumIDs)
 			}
-			for err := range errsChan {
-				assertNil(t, err)
-			}
-			wg.Wait()
-			assertEqual(t, expectedSumIDs, sumIDs)
-		}
+		})
 	}
 }
 
@@ -297,15 +297,14 @@ func gatherRecords(rowsChans []bigcsvreader.RowsChan, errsChan bigcsvreader.Errs
 		records = make([][]string, 0)
 	)
 	for i := range rowsChans {
-		wg.Add(1)
-		go func(rowsChan bigcsvreader.RowsChan, mutex *sync.Mutex, waitGr *sync.WaitGroup) {
+		wg.Go(func() {
+			rowsChan := rowsChans[i]
 			for record := range rowsChan {
-				mutex.Lock()
+				mu.Lock()
 				records = append(records, record)
 				mu.Unlock()
 			}
-			waitGr.Done()
-		}(rowsChans[i], &mu, &wg)
+		})
 	}
 
 	for err := range errsChan {
@@ -416,16 +415,15 @@ func consumeBenchResults(rowsChans []bigcsvreader.RowsChan, _ bigcsvreader.ErrsC
 	)
 
 	for i := range rowsChans {
-		wg.Add(1)
-		go func(rowsChan bigcsvreader.RowsChan, waitGr *sync.WaitGroup) {
+		wg.Go(func() {
+			rowsChan := rowsChans[i]
 			var localCount int64
 			for record := range rowsChan {
 				localCount++
 				fakeProcessRow(record)
 			}
 			atomic.AddInt64(&count, localCount)
-			waitGr.Done()
-		}(rowsChans[i], &wg)
+		})
 	}
 	wg.Wait()
 
@@ -531,16 +529,14 @@ func benchmarkStdGoCsvReaderReadOneByOneProcessParalell(rowsCount int64) func(b 
 				wg    sync.WaitGroup
 			)
 			for range numWorkers {
-				wg.Add(1)
-				go func() {
+				wg.Go(func() {
 					var localCount int64
 					for record := range rowsChan {
 						localCount++
 						fakeProcessRow(record)
 					}
 					atomic.AddInt64(&count, localCount)
-					wg.Done()
-				}()
+				})
 			}
 
 			// sequential reading

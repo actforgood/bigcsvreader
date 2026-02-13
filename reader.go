@@ -153,18 +153,18 @@ func (cr *CsvReader) readAsync(
 
 	// create a wait group pool as we need to wait for all goroutines to terminate.
 	var wg sync.WaitGroup
-	wg.Add(totalThreads)
 	worker := cr.readBetweenOffsetsAsync
 	for thread := range totalThreads {
-		go worker(
-			ctx,
-			thread+1,
-			threadsInfo[thread][0], // start offset
-			threadsInfo[thread][1], // end offset
-			&wg,
-			rowsChans[thread],
-			errsChan,
-		)
+		wg.Go(func() {
+			worker(
+				ctx,
+				thread+1,
+				threadsInfo[thread][0], // start offset
+				threadsInfo[thread][1], // end offset
+				rowsChans[thread],
+				errsChan,
+			)
+		})
 	}
 	wg.Wait()
 
@@ -175,12 +175,9 @@ func (cr *CsvReader) readAsync(
 func (cr *CsvReader) readBetweenOffsetsAsync(
 	ctx context.Context,
 	currentThreadNo, offsetStart, offsetEnd int,
-	wg *sync.WaitGroup,
 	rowsChan chan<- []string,
 	errsChan chan<- error,
 ) {
-	defer wg.Done()
-
 	f := cr.openFile(currentThreadNo, errsChan)
 	if f == nil {
 		return

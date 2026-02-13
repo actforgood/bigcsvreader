@@ -14,8 +14,8 @@ for profileFor in "${profilesFor[@]}"
 do
     echo "Handling profiles for ${profileFor}"
     go run "${SCRIPT_PATH}/../cmd/pprof/main.go" -for="${profileFor}"
-    go tool pprof -http=":${port}" "mem_${profileFor}.prof" &
+    go tool pprof -http=":${port}" "${SCRIPT_PATH}/../bin/mem_${profileFor}.prof" &
     port=$(( port + 1 ))
-    go tool pprof -http=":${port}" "cpu_${profileFor}.prof" &
+    go tool pprof -http=":${port}" "${SCRIPT_PATH}/../bin/cpu_${profileFor}.prof" &
     port=$(( port + 1 ))
 done

@@ -13,7 +13,7 @@ jobs:
     timeout-minutes: 10
     strategy:
       matrix:
-        go-version: [1.23.x, 1.24.x]
+        go-version: [1.25.x, 1.26.x]
         platform: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.platform }}
     
@@ -24,10 +24,10 @@ jobs:
         go-version: ${{ matrix.go-version }}
 
     - name: Checkout code
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: Load cached dependencies
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('**/go.sum') }}
@@ -44,9 +44,9 @@ jobs:
       run: make clean cover
 
     - name: Upload coverage to coveralls.io
-      if: matrix.platform == 'ubuntu-latest' && matrix.go-version == '1.24.x'
+      if: matrix.platform == 'ubuntu-latest' && matrix.go-version == '1.26.x'
       uses: coverallsapp/github-action@v2
       with:
-        file: cover.out
+        file: bin/cover.out
         flag-name: ${{ runner.os }}-go-${{ matrix.go-version }}
         fail-on-error: false
