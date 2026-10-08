@@ -236,7 +236,11 @@ ForLoop:
 					"offset", currentOffsetPos, "row", string(line),
 				)
 			} else {
-				rowsChan <- record
+				select {
+				case rowsChan <- record:
+				case <-ctx.Done():
+					continue ForLoop
+				}
 			}
 
 			currentOffsetPos += len(line)

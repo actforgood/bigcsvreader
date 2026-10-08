@@ -9,8 +9,10 @@ import (
 	"context"
 	"encoding/csv"
 	"errors"
+	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"reflect"
 	"runtime"
 	"strconv"
@@ -584,4 +586,93 @@ func Benchmark50000Rows_50Mb_withStdGoCsvReaderReadOneByOneAndReuseRecord(b *tes
 
 func Benchmark50000Rows_50Mb_withStdGoCsvReaderReadOneByOneProcessParalell(b *testing.B) {
 	benchmarkStdGoCsvReaderReadOneByOneProcessParalell(5e4)(b)
+}
+
+func TestCancellationStopsBackpressuredReader(t *testing.T) {
+	for _, workers := range []int{1, 4} {
+		for _, deadline := range []bool{false, true} {
+			t.Run(fmt.Sprintf("workers=%d/deadline=%t", workers, deadline), func(t *testing.T) {
+				name := filepath.Join(t.TempDir(), "rows.csv")
+				if err := os.WriteFile(name, []byte(strings.Repeat("1,value\n", 4000)), 0600); err != nil {
+					t.Fatal(err)
+				}
+
+				synctest.Test(t, func(t *testing.T) {
+					reader := bigcsvreader.New()
+					reader.SetFilePath(name)
+					reader.MaxGoroutinesNo = workers
+					reader.ColumnsCount = 2
+					ctx, cancel := context.WithCancel(context.Background())
+					wantErr := context.Canceled
+					if deadline {
+						cancel()
+						ctx, cancel = context.WithTimeout(context.Background(), time.Second)
+						wantErr = context.DeadlineExceeded
+					}
+					defer cancel()
+					rows, errs := reader.Read(ctx)
+					synctest.Wait()
+					if len(rows) != workers {
+						t.Fatalf("got %d row channels, want %d", len(rows), workers)
+					}
+					for i, ch := range rows {
+						if len(ch) != cap(ch) {
+							t.Fatalf("worker %d buffered %d rows, want %d", i, len(ch), cap(ch))
+						}
+					}
+
+					if deadline {
+						time.Sleep(time.Second)
+					} else {
+						cancel()
+					}
+					synctest.Wait()
+
+					var reported []error
+					closed := false
+				DrainErrors:
+					for {
+						select {
+						case err, ok := <-errs:
+							if !ok {
+								closed = true
+
+								break DrainErrors
+							}
+							reported = append(reported, err)
+						default:
+							break DrainErrors
+						}
+					}
+					if !closed {
+						t.Error("error channel is still open after the read context ended")
+					}
+					if len(reported) != workers {
+						t.Errorf("got %d cancellation errors, want %d", len(reported), workers)
+					}
+					for _, err := range reported {
+						if !errors.Is(err, wantErr) {
+							t.Errorf("got error %v, want %v", err, wantErr)
+						}
+					}
+
+					for _, ch := range rows {
+						go func() {
+							received := 0
+							for range ch {
+								received++
+							}
+							if closed {
+								assertEqual(t, cap(ch), received)
+							}
+						}()
+					}
+					for err := range errs {
+						t.Errorf("error received after reader completion: %v", err)
+					}
+					synctest.Wait()
+				})
+			})
+		}
+	}
 }
